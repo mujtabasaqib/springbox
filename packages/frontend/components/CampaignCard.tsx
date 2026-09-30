@@ -1,7 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { supabase } from "@/lib/supabase";
 import { joinCampaign } from "@/lib/joins";
 import type { Campaign } from "@/lib/data/campaigns";
 
@@ -10,23 +9,27 @@ const dot: Record<Campaign["status"], string> = {
 };
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
-export default function CampaignCard({ c }: { c: Campaign }) {
-  const { authenticated, user, login, getAccessToken } = usePrivy();
-  const [joined, setJoined] = useState(false);
+export default function CampaignCard({
+  c,
+  joined,
+  onJoined,
+}: {
+  c: Campaign;
+  joined: boolean;
+  onJoined: () => void;
+}) {
+  const { authenticated, login, getAccessToken } = usePrivy();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!authenticated || !user) return;
-    supabase.from("campaign_joins").select("id").eq("creator_id", user.id).eq("campaign_id", c.id).maybeSingle()
-      .then(({ data }) => setJoined(!!data));
-  }, [authenticated, user, c.id]);
 
   const handleJoin = async () => {
     if (!authenticated) return login();
     setLoading(true);
     try {
       const token = await getAccessToken();
-      if (token) { await joinCampaign(token, c.id); setJoined(true); }
+      if (token) {
+        await joinCampaign(token, c.id);
+        onJoined();
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : "Something went wrong");
     } finally {

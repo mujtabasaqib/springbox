@@ -14,6 +14,20 @@ const router = Router();
 // In-memory log, replace with a real DB. 
 const eventLog: (EventBody & { verified: boolean })[] = [];
 
+const seen = new Map<string, number>(); // nonce -> expiry
+let poolPending = 0;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, exp] of seen) if (exp < now) seen.delete(k);
+  if (poolPending > 0) {
+    const n = poolPending; poolPending = 0;
+    void supabase.rpc('increment_pool_views', { n }).then(({ error }) => {
+      if (error) { console.error('[pool]', error); poolPending += n; }
+    });
+  }
+}, 3000).unref();
+
 router.post('/', (req: Request<{}, {}, EventBody>, res: Response) => {
   const body = req.body;
 
@@ -21,7 +35,7 @@ router.post('/', (req: Request<{}, {}, EventBody>, res: Response) => {
     return res.status(400).json({ error: 'missing fields' });
   }
 
-  const { valid, adId } = verifyToken(body.token, body.publisherId, body.slotId);
+  const { valid, adId, nonce, exp } = verifyToken(body.token, body.publisherId, body.slotId);
   if (!valid || adId !== body.adId) {
     console.warn('[events] rejected invalid/forged token', body);
     return res.status(403).json({ error: 'invalid token' });
@@ -37,6 +51,10 @@ router.post('/', (req: Request<{}, {}, EventBody>, res: Response) => {
       });
       return res.status(403).json({ error: 'implausible view signal' });
     }
+
+    if (seen.has(nonce!)) return res.status(409).json({ error: 'token already used' });
+    seen.set(nonce!, exp!);
+    poolPending++;
   }
 
   eventLog.push({ ...body, verified: true });
@@ -45,8 +63,8 @@ router.post('/', (req: Request<{}, {}, EventBody>, res: Response) => {
 //}
 
   if (body.type === 'impression') {
-  void supabase.rpc('increment_pool_views', { n: 1 })
-    .then(({ error }) => error && console.error('[pool]', error));
+  //void supabase.rpc('increment_pool_views', { n: 1 })
+   // .then(({ error }) => error && console.error('[pool]', error));
   // use adId from the verified token, not body.campaignId (which is unverified)
   void supabase.rpc('credit_impression', { p_publisher: body.publisherId, p_campaign: adId })
     .then(({ error }) => error && console.error('[credit]', error));

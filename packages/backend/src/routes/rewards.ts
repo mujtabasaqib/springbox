@@ -5,24 +5,49 @@ import { verifyPrivyToken } from '../privyAuth';
 import { syncWallet } from '../wallet';
 import { Router } from "express";
 
-const RATE_PER_VIEW = 0.0005;   
-const VIEWS_PER_MEMBER = 1000;  
+const RATE_PER_VIEW = 0.0005;
+const VIEWS_PER_MEMBER = 1000;
+const MEMBER_COUNT_TTL_MS = 60_000;
 
 const router = Router();
 
-async function rewardState(did: string) {
-  // First-write-wins: joins on first call, does nothing afterwards
-  await supabase.from("profiles").upsert({ privy_did: did, role: "user" },{ onConflict: "privy_did", ignoreDuplicates: true });
-  await supabase.from('reward_members').upsert({ privy_did: did }, { onConflict: 'privy_did', ignoreDuplicates: true });
+const known = new Set<string>(); // dids already upserted by this process
+let memberCache: { n: number; at: number } | null = null;
+
+async function getMemberCount(fresh: boolean): Promise<number> {
+  if (!fresh && memberCache && Date.now() - memberCache.at < MEMBER_COUNT_TTL_MS) {
+    return memberCache.n;
+  }
+  const { count, error } = await supabase
+    .from('reward_members')
+    .select('*', { count: 'exact', head: true });
+  if (error) return memberCache?.n ?? 1; // serve stale rather than fail
+  memberCache = { n: count ?? 1, at: Date.now() };
+  return memberCache.n;
+}
+
+async function rewardState(did: string, fresh = false) {
+  // First-write-wins: only runs the first time this process sees the user
+  if (!known.has(did)) {
+    const a = await supabase.from("profiles").upsert(
+      { privy_did: did, role: "user" },
+      { onConflict: "privy_did", ignoreDuplicates: true }
+    );
+    const b = await supabase.from('reward_members').upsert(
+      { privy_did: did },
+      { onConflict: 'privy_did', ignoreDuplicates: true }
+    );
+    if (!a.error && !b.error) known.add(did); // only remember on success
+  }
 
   const [pool, count, me] = await Promise.all([
     supabase.from('reward_pool').select('verified_views').eq('id', 1).single(),
-    supabase.from('reward_members').select('*', { count: 'exact', head: true }),
+    getMemberCount(fresh),
     supabase.from('reward_members').select('claimed_at, claimed_amount').eq('privy_did', did).single(),
   ]);
 
   const views = Number(pool.data?.verified_views ?? 0);
-  const members = Math.max(1, count.count ?? 1);
+  const members = Math.max(1, count);
   const unlockAt = VIEWS_PER_MEMBER * members;
   return {
     views,
@@ -47,7 +72,7 @@ router.post('/claim', async (req: Request, res: Response) => {
   const did = await verifyPrivyToken(req.headers.authorization);
   if (!did) return res.status(401).json({ error: 'unauthorized' });
 
-  const s = await rewardState(did);
+  const s = await rewardState(did, true); // fresh count: claimed_amount is stored permanently
   if (!s.unlocked) return res.status(403).json({ error: 'pool is still locked' });
   if (s.claimed) return res.status(409).json({ error: 'already claimed' });
 

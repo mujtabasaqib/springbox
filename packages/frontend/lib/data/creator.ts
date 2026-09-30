@@ -4,16 +4,37 @@ import type { Campaign } from "@/lib/data/campaigns";
 export type Payout = { id: string; date: string; campaign: string; amount: number; status: "claimed" | "pending" };
 export type JoinedCampaign = { id: string; brand: string; title: string; status: Campaign["status"]; earned: number; views: number };
 
+type JoinRow = {
+  id: string;
+  earned: number;
+  views: number;
+  campaigns: Pick<Campaign, "id" | "brand" | "title" | "status"> | null;
+};
+
 export const getJoinedCampaigns = async (creatorId: string): Promise<JoinedCampaign[]> => {
   const { data, error } = await supabase
     .from("campaign_joins")
     .select("id, earned, views, campaigns(id, brand, title, status)")
-    .eq("creator_id", creatorId);
+    .eq("creator_id", creatorId)
+    .returns<JoinRow[]>();
 
-  if (error || !data) { console.error("[getJoinedCampaigns]", error); return []; }
-  return data
-    .filter((r) => r.campaigns)
-    .map((r) => ({ id: r.campaigns!.id, brand: r.campaigns!.brand, title: r.campaigns!.title, status: r.campaigns!.status, earned: r.earned, views: r.views }));
+  if (error || !data) {
+    console.error("[getJoinedCampaigns]", error);
+    return [];
+  }
+
+  return data.flatMap((r) =>
+    r.campaigns
+      ? [{
+          id: r.campaigns.id,
+          brand: r.campaigns.brand,
+          title: r.campaigns.title,
+          status: r.campaigns.status,
+          earned: r.earned,
+          views: r.views,
+        }]
+      : []
+  );
 };
 
 // still mock — payouts table not built yet
