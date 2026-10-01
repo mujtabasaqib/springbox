@@ -50,7 +50,11 @@ export default function Rewards() {
           </div>
         )}
 
-        {authenticated && s && <div className="mt-10 text-left"><ClaimButton /></div>}
+        {authenticated && s && (
+  <div className="mt-10 text-left">
+    <ClaimButton />
+  </div>
+)}
 
         {error && <p className="mt-6 text-red-700">{error}</p>}
       </div>

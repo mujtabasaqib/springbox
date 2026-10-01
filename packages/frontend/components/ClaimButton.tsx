@@ -4,6 +4,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { formatUnits } from "viem";
 import { pickWallet, errMsg } from "@/lib/chain";
 import { claimOnchain, getClaimState, getMinClaim, type ClaimState } from "@/lib/onchain";
+import FaucetButton from "@/components/FaucetButton";
 
 export default function ClaimButton() {
   const { authenticated, getAccessToken } = usePrivy();
@@ -57,9 +58,12 @@ const mismatch = !!(linked && wallet && linked !== wallet.address.toLowerCase())
     <div className="rounded-3xl border border-line bg-surface p-6">
       <p className="text-sm text-muted">Claimable</p>
       <p className="display mt-1 text-3xl">${formatUnits(claimable, 6)}</p>
-      <button onClick={claim} disabled={!canClaim || busy} className="mt-4 rounded-full bg-brand-a px-5 py-2 text-sm font-semibold disabled:opacity-40">
-        {busy ? "Claiming…" : "Claim"}
-      </button>
+      <div className="mt-4 flex items-center gap-3">
+  <button onClick={claim} disabled={!canClaim || busy} className="rounded-full bg-brand-a px-5 py-2 text-sm font-semibold disabled:opacity-40">
+    {busy ? "Claiming…" : "Claim"}
+  </button>
+  {canClaim && !mismatch && !busy && <FaucetButton />}
+</div>
       {state && !state.available && <p className="mt-2 text-xs text-muted">{state.reason}</p>}
       {state?.available && claimable > 0n && claimable < minClaim && (
         <p className="mt-2 text-xs text-muted">Minimum claim is ${formatUnits(minClaim, 6)}.</p>

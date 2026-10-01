@@ -3,6 +3,7 @@ import StatusPill from "@/components/StatusPill";
 import CreateCampaignDialog from "@/components/CreateCampaignDialog";
 import FundCampaignButton from "@/components/FundCampaignButton";
 import { getAdvertiserStats, getAdCampaigns } from "@/lib/data/advertiser";
+import FaucetButton from "@/components/FaucetButton";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
@@ -20,6 +21,7 @@ export default async function AdvertiserDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="display text-4xl">Advertiser dashboard</h1>
         <CreateCampaignDialog />
+        <FaucetButton />
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
