@@ -1,12 +1,20 @@
+export interface NativeContent {
+  brand: string;
+  headline: string;
+  body?: string;
+  cta: string;
+}
+
 export interface AdCreative {
   adId: string;
   campaignId: string;
-  imageUrl: string;
+  imageUrl?: string;        // image ads only
+  native?: NativeContent;   // native ads only
   clickUrl: string;
   width: number;
   height: number;
   title?: string;
-  token: string; // signed proof this ad was actually served for this request
+  token: string;
 }
 
 export interface AdRequestBody {

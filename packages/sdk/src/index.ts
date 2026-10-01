@@ -1,9 +1,10 @@
 import { mountSlot } from './slot';
-import type { ResolvedConfig, SdkConfig, SlotHandle, SlotOptions } from './types';
+import type { FontName, ResolvedConfig, SdkConfig, SlotHandle, SlotOptions, ThemeName } from './types';
 import { log, resolveConfig } from './utils';
 
-export type { AdCreative, SdkConfig, SlotHandle, SlotOptions } from './types';
+export type { AdCreative, AdTheme, FontName, NativeContent, SdkConfig, SlotHandle, SlotOptions, ThemeName } from './types';
 export { connectWallet } from './wallet';
+export { renderNativeAd, THEMES, FONTS, resolveTheme } from './native';
 
 let config: ResolvedConfig | null = null;
 const handles = new Map<HTMLElement, SlotHandle>();
@@ -33,10 +34,16 @@ export function scan(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-w3ads-slot]').forEach((el) => {
     if (handles.has(el)) return;
     mount(el, {
-      slotId: el.dataset.w3adsSlot!,
-      width: el.dataset.width ? Number(el.dataset.width) : undefined,
-      height: el.dataset.height ? Number(el.dataset.height) : undefined,
-    });
+  slotId: el.dataset.w3adsSlot!,
+  width: el.dataset.width ? Number(el.dataset.width) : undefined,
+  height: el.dataset.height ? Number(el.dataset.height) : undefined,
+  theme: {
+    preset: el.dataset.theme as ThemeName | undefined,
+    accent: el.dataset.accent,
+    bg: el.dataset.bg,
+    font: el.dataset.font as FontName | undefined,
+  },
+});
   });
 }
 

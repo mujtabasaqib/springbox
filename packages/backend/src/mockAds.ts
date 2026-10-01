@@ -26,7 +26,7 @@ const CAMPAIGNS: Omit<AdCreative, 'token'>[] = [
 export async function pickAd(): Promise<Omit<AdCreative, 'token'> | null> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('id, title, image_url, click_url, width, height')
+    .select('id, title, image_url, click_url, width, height, creative_type, native')
     .eq('status', 'live');
 
   if (error) {
@@ -37,12 +37,13 @@ export async function pickAd(): Promise<Omit<AdCreative, 'token'> | null> {
 
   const row = data[Math.floor(Math.random() * data.length)]!;
   return {
-    adId: row.id,
-    campaignId: row.id, // one ad per campaign for v1, so these are the same
-    imageUrl: row.image_url,
-    clickUrl: row.click_url,
-    width: row.width,
-    height: row.height,
-    title: row.title,
-  };
+  adId: row.id,
+  campaignId: row.id,
+  imageUrl: row.creative_type === 'native' ? undefined : row.image_url,
+  native: row.creative_type === 'native' ? row.native : undefined,
+  clickUrl: row.click_url,
+  width: row.width,
+  height: row.height,
+  title: row.title,
+};
 }

@@ -11,15 +11,41 @@ export interface ResolvedConfig extends Required<Omit<SdkConfig, 'debug'>> {
   debug: boolean;
 }
 
+export interface NativeContent {
+  brand: string;
+  headline: string;
+  body?: string;
+  cta: string;
+}
+
+export type ThemeName = 'light' | 'dark' | 'minimal' | 'midnight' | 'brutalist';
+
+export type FontName =
+  | 'inherit'
+  | 'sans'
+  | 'serif'
+  | 'mono'
+  | 'humanist'
+  | 'rounded'
+  | 'geometric'
+  | 'classic';
+
+export interface AdTheme {
+  preset?: ThemeName;
+  accent?: string; // #rrggbb
+  bg?: string;     // #rrggbb
+  font?: FontName;
+}
+
 export interface AdCreative {
   adId: string;
   campaignId: string;
-  imageUrl: string;
+  imageUrl?: string;       // was required, now only for image ads
+  native?: NativeContent;  // present => native ad
   clickUrl: string;
   width: number;
   height: number;
   title?: string;
-  /** Signed by backend; proves this impression/click belongs to this ad request. */
   token: string;
 }
 
@@ -32,6 +58,7 @@ export interface SlotOptions {
   onError?: (err: Error) => void;
   onImpression?: (ad: AdCreative) => void;
   onClick?: (ad: AdCreative) => void;
+  theme?: AdTheme;
 }
 
 export type EventType = 'impression' | 'click';

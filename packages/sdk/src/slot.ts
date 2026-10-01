@@ -1,11 +1,21 @@
-import { requestAd, sendEvent } from './api';
-import type { BotSignals, ResolvedConfig, SlotHandle, SlotOptions } from './types';
-import { isSafeUrl, log } from './utils';
+import { requestAd, sendEvent } from "./api";
+import type {
+  BotSignals,
+  ResolvedConfig,
+  SlotHandle,
+  SlotOptions,
+} from "./types";
+import { isSafeUrl, log } from "./utils";
+import { renderNativeAd } from "./native";
 
 const VIEW_THRESHOLD = 0.5; // 50% of pixels visible...
 const VIEW_MS = 1000; // ...for 1 continuous second (IAB-style viewability)
 
-export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOptions): SlotHandle {
+export function mountSlot(
+  cfg: ResolvedConfig,
+  el: HTMLElement,
+  opts: SlotOptions,
+): SlotHandle {
   let destroyed = false;
   let observer: IntersectionObserver | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -18,7 +28,7 @@ export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOption
   let isIntersecting = false;
 
   function tabIsForeground(): boolean {
-    return document.visibilityState === 'visible' && document.hasFocus();
+    return document.visibilityState === "visible" && document.hasFocus();
   }
 
   function updateDwellAccrual() {
@@ -47,46 +57,52 @@ export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOption
   const onVisibilityChange = () => updateDwellAccrual();
   const onFocus = () => updateDwellAccrual();
   const onBlur = () => updateDwellAccrual();
-  document.addEventListener('visibilitychange', onVisibilityChange);
-  window.addEventListener('focus', onFocus);
-  window.addEventListener('blur', onBlur);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", onFocus);
+  window.addEventListener("blur", onBlur);
 
-  const root = el.shadowRoot ?? el.attachShadow({ mode: 'open' });
-  root.innerHTML = '';
+  const root = el.shadowRoot ?? el.attachShadow({ mode: "open" });
+  root.innerHTML = "";
 
   (async () => {
     try {
       const ad = await requestAd(cfg, opts);
       if (destroyed) return;
       if (!ad) return opts.onEmpty?.();
-      if (!isSafeUrl(ad.imageUrl) || !isSafeUrl(ad.clickUrl)) {
-        throw new Error('Ad rejected: unsafe URL');
+      if (!isSafeUrl(ad.clickUrl)) throw new Error("Ad rejected: unsafe URL");
+
+      let a: HTMLAnchorElement;
+      if (ad.native) {
+        a = renderNativeAd(root, ad, opts.theme);
+      } else {
+        if (!ad.imageUrl || !isSafeUrl(ad.imageUrl))
+          throw new Error("Ad rejected: unsafe URL");
+        a = document.createElement("a");
+        a.href = ad.clickUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer sponsored";
+        a.style.cssText =
+          "display:inline-block;position:relative;line-height:0;";
+
+        const img = document.createElement("img");
+        img.src = ad.imageUrl;
+        img.alt = ad.title ?? "Advertisement";
+        img.width = opts.width ?? ad.width;
+        img.height = opts.height ?? ad.height;
+        img.style.cssText = "display:block;max-width:100%;height:auto;";
+
+        const badge = document.createElement("span");
+        badge.textContent = "Ad";
+        badge.style.cssText =
+          "position:absolute;top:2px;right:2px;font:10px sans-serif;background:#0008;color:#fff;padding:1px 4px;border-radius:2px;";
+
+        a.append(img, badge);
+        root.append(a);
       }
-
-      const a = document.createElement('a');
-      a.href = ad.clickUrl;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer sponsored';
-      a.style.cssText = 'display:inline-block;position:relative;line-height:0;';
-
-      const img = document.createElement('img');
-      img.src = ad.imageUrl;
-      img.alt = ad.title ?? 'Advertisement';
-      img.width = opts.width ?? ad.width;
-      img.height = opts.height ?? ad.height;
-      img.style.cssText = 'display:block;max-width:100%;height:auto;';
-
-      const badge = document.createElement('span');
-      badge.textContent = 'Ad';
-      badge.style.cssText =
-        'position:absolute;top:2px;right:2px;font:10px sans-serif;background:#0008;color:#fff;padding:1px 4px;border-radius:2px;';
-
-      a.append(img, badge);
-      root.append(a);
       opts.onLoad?.(ad);
 
-      a.addEventListener('click', () => {
-        sendEvent(cfg, 'click', ad, opts.slotId);
+      a.addEventListener("click", () => {
+        sendEvent(cfg, "click", ad, opts.slotId);
         opts.onClick?.(ad);
       });
 
@@ -101,9 +117,9 @@ export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOption
             timer = setTimeout(() => {
               fired = true;
               observer?.disconnect();
-              sendEvent(cfg, 'impression', ad, opts.slotId, botSignals());
+              sendEvent(cfg, "impression", ad, opts.slotId, botSignals());
               opts.onImpression?.(ad);
-              log(cfg, 'impression', opts.slotId, ad.adId, botSignals());
+              log(cfg, "impression", opts.slotId, ad.adId, botSignals());
             }, VIEW_MS);
           } else if (timer) {
             clearTimeout(timer);
@@ -115,7 +131,7 @@ export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOption
       observer.observe(a);
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
-      log(cfg, 'error', err);
+      log(cfg, "error", err);
       opts.onError?.(err);
     }
   })();
@@ -125,10 +141,10 @@ export function mountSlot(cfg: ResolvedConfig, el: HTMLElement, opts: SlotOption
       destroyed = true;
       observer?.disconnect();
       if (timer) clearTimeout(timer);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('blur', onBlur);
-      root.innerHTML = '';
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+      root.innerHTML = "";
     },
   };
 }

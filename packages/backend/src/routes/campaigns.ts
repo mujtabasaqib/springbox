@@ -9,32 +9,60 @@ import { Router } from "express";
 
 const router = Router();
 
+const LIMITS = { brand: 25, headline: 50, body: 100, cta: 20 } as const;
+
+function cleanNative(n: any) {
+  if (!n || typeof n !== 'object') return null;
+  const brand = String(n.brand ?? '').trim();
+  const headline = String(n.headline ?? '').trim();
+  const body = String(n.body ?? '').trim();
+  const cta = String(n.cta ?? '').trim();
+  if (!brand || !headline || !cta) return null;
+  if (brand.length > LIMITS.brand || headline.length > LIMITS.headline ||
+      body.length > LIMITS.body || cta.length > LIMITS.cta) return null;
+  return { brand, headline, cta, ...(body ? { body } : {}) };
+}
+
 router.post('/', async (req: Request, res: Response) => {
     const userId = await verifyPrivyToken(req.headers.authorization);
   if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
-  const { title, category, budget, cpm, imageUrl, clickUrl, width, height } = req.body;
+  const { title, category, budget, cpm, imageUrl, clickUrl, width, height, creativeType, native } = req.body;
+const isNative = creativeType === 'native';
 
-  if (!title || !category || !budget || !cpm || !imageUrl || !clickUrl) {
-    return res.status(400).json({ error: 'missing required fields' });
-  }
+if (!title || !category || !budget || !cpm || !clickUrl) {
+  return res.status(400).json({ error: 'missing required fields' });
+}
+//if (!/^https:\/\//i.test(clickUrl)) {
+  //return res.status(400).json({ error: 'clickUrl must be https' });
+//}
 
-  const { data, error } = await supabase
-    .from('campaigns')
-    .insert({
-      title,
-      category,
-      budget,
-      cpm,
-      image_url: imageUrl,
-      click_url: clickUrl,
-      width: width ?? 300,
-      height: height ?? 250,
-      status: 'draft', 
-      advertiser_id: userId
-    })
-    .select()
-    .single();
+let cleanedNative = null;
+if (isNative) {
+  cleanedNative = cleanNative(native);
+  if (!cleanedNative) return res.status(400).json({ error: 'invalid native creative' });
+} else if (!imageUrl) {
+  return res.status(400).json({ error: 'missing required fields' });
+}
+
+const { data, error } = await supabase
+  .from('campaigns')
+  .insert({
+    title,
+    category,
+    budget,
+    cpm,
+    creative_type: isNative ? 'native' : 'image',
+    image_url: isNative ? null : imageUrl,
+    native: cleanedNative,
+    click_url: clickUrl,
+    width: isNative ? 300 : (width ?? 300),
+    height: isNative ? 250 : (height ?? 250),
+    status: 'draft',
+    advertiser_id: userId,
+  })
+  .select()
+  .single();
 
   if (error) {
     console.error('[POST /v1/campaigns] supabase error', error);
