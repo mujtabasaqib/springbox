@@ -78,5 +78,15 @@ router.get('/debug', (_req: Request, res: Response) => {
   res.json({ count: eventLog.length, events: eventLog });
 });
 
+router.get('/stats', (_req: Request, res: Response) => {
+  const out: Record<string, { impressions: number; clicks: number }> = {};
+  for (const e of eventLog) {
+    const s = (out[e.adId] ??= { impressions: 0, clicks: 0 });
+    if (e.type === 'impression') s.impressions++;
+    else if (e.type === 'click') s.clicks++;
+  }
+  res.json(out);
+});
+
 
 export default router;

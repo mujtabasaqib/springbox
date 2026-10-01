@@ -44,6 +44,7 @@ router.post('/', async (req: Request, res: Response) => {
   res.status(201).json({ campaign: data });
 });
 
+/*
 router.post('/:id/join', async (req: Request, res: Response) => {
   const did = await verifyPrivyToken(req.headers.authorization);
   if (!did) return res.status(401).json({ error: 'unauthorized' });
@@ -67,6 +68,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
   if (error) return res.status(500).json({ error: 'failed to join campaign' });
   res.status(201).json({ join: data });
 });
+*/
 
 router.post('/:id/fund', async (req: Request, res: Response) => {
   const did = await verifyPrivyToken(req.headers.authorization);

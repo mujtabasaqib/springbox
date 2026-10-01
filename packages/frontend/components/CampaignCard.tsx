@@ -1,7 +1,3 @@
-"use client";
-import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
-import { joinCampaign } from "@/lib/joins";
 import type { Campaign } from "@/lib/data/campaigns";
 
 const dot: Record<Campaign["status"], string> = {
@@ -9,34 +5,7 @@ const dot: Record<Campaign["status"], string> = {
 };
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
-export default function CampaignCard({
-  c,
-  joined,
-  onJoined,
-}: {
-  c: Campaign;
-  joined: boolean;
-  onJoined: () => void;
-}) {
-  const { authenticated, login, getAccessToken } = usePrivy();
-  const [loading, setLoading] = useState(false);
-
-  const handleJoin = async () => {
-    if (!authenticated) return login();
-    setLoading(true);
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        await joinCampaign(token, c.id);
-        onJoined();
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function CampaignCard({ c }: { c: Campaign }) {
   const pct = Math.round((c.spent / c.budget) * 100);
   return (
     <article className="flex flex-col gap-5 rounded-3xl border border-line bg-surface p-6 transition hover:-translate-y-1">
@@ -54,15 +23,8 @@ export default function CampaignCard({
         <div className="h-2 rounded-full bg-canvas"><div className="h-full rounded-full bg-brand-b" style={{ width: `${pct}%` }} /></div>
         <p className="mt-2 flex justify-between font-mono text-xs text-muted"><span>{usd(c.spent)} / {usd(c.budget)}</span><span>{pct}%</span></p>
       </div>
-      <div className="mt-auto flex items-center justify-between">
+      <div className="mt-auto">
         <p className="font-mono text-sm text-muted"><b className="font-display text-2xl text-ink">${c.cpm}</b> / 1k views</p>
-        <button
-          onClick={handleJoin}
-          disabled={c.status === "ended" || joined || loading}
-          className="rounded-full bg-brand-a px-5 py-2.5 text-sm font-semibold transition hover:bg-ink hover:text-white disabled:opacity-30 disabled:hover:bg-brand-a disabled:hover:text-ink"
-        >
-          {joined ? "Joined" : loading ? "Joining…" : "Join"}
-        </button>
       </div>
     </article>
   );
