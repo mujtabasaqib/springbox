@@ -99,3 +99,22 @@ export async function recordClaim(token: string, txHash: Hash) {
     method: "POST", headers: authed(token), body: JSON.stringify({ txHash }),
   }).catch(() => {}); // non-blocking; the history simply lags until retried
 }
+
+export async function recordWithdraw(token: string, txHash: Hash) {
+  await fetch(`${BACKEND}/v1/claims/withdraw`, {
+    method: "POST", headers: authed(token), body: JSON.stringify({ txHash }),
+  }).catch(() => {});
+}
+
+export async function sendUsdc(wallet: ConnectedWallet, to: Address, units: bigint) {
+  const client = await walletClientFor(wallet);
+  const hash = await client.writeContract({
+    address: USDC, abi: erc20Abi, functionName: "transfer", args: [to, units],
+    account: wallet.address as Address, chain,
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  return hash;
+}
+
+export const getUsdcBalance = (account: Address) =>
+  publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: "balanceOf", args: [account] });

@@ -6,9 +6,12 @@ import type { Address } from 'viem';
 import { syncWallet } from '../wallet';
 import { publicClient, ESCROW, escrowAbi } from '../chain';
 import { Router } from "express";
-import { formatUnits, type Hash } from 'viem';
+import { parseAbi, parseEventLogs, formatUnits, type Hash } from 'viem';
 
 const router = Router();
+
+const transferAbi = parseAbi(['event Transfer(address indexed from, address indexed to, uint256 value)']);
+const USDC = process.env.USDC_ADDRESS!;
 
 router.get('/me', async (req: Request, res: Response) => {
   const did = await verifyPrivyToken(req.headers.authorization);
@@ -66,7 +69,7 @@ router.get('/history', async (req: Request, res: Response) => {
 
   const { data: payouts } = await supabase
     .from('payouts')
-    .select('tx_hash, amount, created_at')
+    .select('tx_hash, amount, created_at, kind')
     .eq('address', address)
     .order('created_at', { ascending: false });
 
@@ -75,7 +78,8 @@ router.get('/history', async (req: Request, res: Response) => {
       id: p.tx_hash,
       date: p.created_at.slice(0, 10),
       amount: toUsd(BigInt(p.amount)),
-      status: 'claimed',
+      status: p.kind === "withdraw" ? "withdraw" : "claimed",
+      kind: p.kind,
     })),
   });
 });
@@ -104,6 +108,32 @@ router.post('/record', async (req: Request, res: Response) => {
   await supabase
     .from('payouts')
     .upsert({ tx_hash: hash, address, amount: amount.toString() }, { onConflict: 'tx_hash', ignoreDuplicates: true });
+  res.json({ ok: true });
+});
+
+router.post('/withdraw', async (req: Request, res: Response) => {
+  const address = await addressFor(req);
+  if (!address) return res.status(401).json({ error: 'unauthorized' });
+
+  const hash = req.body?.txHash as Hash;
+  const r = await publicClient.getTransactionReceipt({ hash }).catch(() => null);
+  if (
+    !r || r.status !== 'success' ||
+    r.to?.toLowerCase() !== USDC.toLowerCase() ||
+    r.from.toLowerCase() !== address.toLowerCase()
+  ) return res.status(400).json({ error: 'invalid withdraw tx' });
+
+  const log = parseEventLogs({ abi: transferAbi, eventName: 'Transfer', logs: r.logs })
+    .find((l) => l.address.toLowerCase() === USDC.toLowerCase() &&
+                 l.args.from.toLowerCase() === address.toLowerCase());
+  if (!log) return res.status(400).json({ error: 'no transfer in tx' });
+
+  await supabase
+    .from('payouts')
+    .upsert(
+      { tx_hash: hash, address, amount: log.args.value.toString(), kind: 'withdraw', to_address: log.args.to },
+      { onConflict: 'tx_hash', ignoreDuplicates: true },
+    );
   res.json({ ok: true });
 });
 

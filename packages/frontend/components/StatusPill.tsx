@@ -5,6 +5,7 @@ const styles: Record<string, string> = {
   paused: "bg-line text-muted",
   claimed: "bg-brand-a text-ink",
   pending: "border border-line text-muted",
+  withdraw: "bg-brand-a text-ink",
 };
 
 export default function StatusPill({ status }: { status: string }) {

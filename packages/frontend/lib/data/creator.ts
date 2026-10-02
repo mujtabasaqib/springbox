@@ -5,7 +5,7 @@ import { getClaimState } from "@/lib/onchain";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-export type Payout = { id: string; date: string; amount: number; status: "claimed" | "pending" };
+export type Payout = { id: string; date: string; amount: number; status: "claimed" | "pending"; kind?: "claim" | "withdraw"; };
 export type JoinedCampaign = { id: string; brand: string; title: string; status: Campaign["status"]; earned: number; views: number };
 
 type JoinRow = {

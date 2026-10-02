@@ -6,8 +6,10 @@ import StatCard from "@/components/StatCard";
 import StatusPill from "@/components/StatusPill";
 import EarningsChart from "@/components/EarningsChart";
 import ClaimButton from "@/components/ClaimButton";
+import WithdrawCard from "@/components/WithdrawCard";
 import PublisherSnippet from "@/components/PublisherSnippet";
 import { getCreatorStats, getJoinedCampaigns, getPayouts, getViewsSeries, type JoinedCampaign, type Payout } from "@/lib/data/creator";
+import { Copy, Check } from "lucide-react";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 3 })}`;
 
@@ -17,6 +19,8 @@ export default function CreatorDashboard() {
   const [stats, setStats] = useState<Awaited<ReturnType<typeof getCreatorStats>> | null>(null);
   const [joined, setJoined] = useState<JoinedCampaign[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [walletKey, setWalletKey] = useState(0); // bumps to refresh the wallet balance after a claim
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // payouts are on-chain backed; also called after a successful claim
   const refreshPayouts = useCallback(async () => {
@@ -24,6 +28,11 @@ export default function CreatorDashboard() {
     if (!token) return;
     setPayouts(await getPayouts(token));
   }, [getAccessToken]);
+
+  const onClaimed = useCallback(() => {
+    refreshPayouts();
+    setWalletKey((k) => k + 1);
+  }, [refreshPayouts]);
 
   useEffect(() => {
     if (!user) return;
@@ -46,7 +55,7 @@ export default function CreatorDashboard() {
       <h1 className="display text-4xl">Creator dashboard</h1>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(([l, v]) => <StatCard key={l} label={l} value={v} />)}
-        <ClaimButton onClaimed={refreshPayouts} />
+        <ClaimButton onClaimed={onClaimed} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -78,27 +87,44 @@ export default function CreatorDashboard() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-3xl border border-line bg-surface p-6">
-        <p className="mb-4 font-medium">Payout history</p>
-        {payouts.length === 0 ? (
-          <p className="text-sm text-muted">No payouts yet.</p>
-        ) : (
-          <table className="w-full min-w-[360px] text-left text-sm">
-            <thead className="text-muted">
-              <tr><th className="pb-3 font-normal">Date</th><th className="pb-3 font-normal">Amount</th><th className="pb-3 font-normal">Status</th></tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {payouts.map((p) => (
-                <tr key={p.id}>
-                  <td className="py-3 font-mono text-muted">{p.date}</td>
-                  <td className="py-3 font-mono">{usd(p.amount)}</td>
-                  <td className="py-3"><StatusPill status={p.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      {/* Money-out row: history on the left, withdraw on the right */}
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="overflow-x-auto rounded-3xl border border-line bg-surface p-6">
+          <p className="mb-4 font-medium">Payout history</p>
+          {payouts.length === 0 ? (
+            <p className="text-sm text-muted">No payouts yet.</p>
+          ) : (
+            <table className="w-full min-w-[360px] text-left text-sm">
+              <thead className="text-muted">
+                <tr><th className="pb-3 font-normal">Date</th><th className="pb-3 font-normal">Amount</th><th className="pb-3 font-normal">Status</th><th className="pb-3 font-normal">TX</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {payouts.map((p) => (
+                  <tr key={p.id}>
+                    <td className="py-3 font-mono text-muted">{p.date}</td>
+                    <td className="py-3 font-mono">{p.kind === "withdraw" ? "−" : ""}{usd(p.amount)}</td>
+                    <td className="py-3"><StatusPill status={p.status} /></td>
+                    <td className="py-3 font-mono text-muted">
+  <div className="flex items-center gap-2">
+    {p.id.slice(0, 5)}...
+    <button onClick={async () => {
+      await navigator.clipboard.writeText(p.id);
+      setCopiedId(p.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }}>
+      {copiedId === p.id ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+  </div>
+</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <WithdrawCard refreshKey={walletKey} onSent={refreshPayouts} />
       </div>
+
       <PublisherSnippet />
     </>
   );
