@@ -93,3 +93,9 @@ export async function getPublisherId(token: string): Promise<string | null> {
   if (!res.ok) return null;
   return (await res.json()).publisherId ?? null;
 }
+
+export async function recordClaim(token: string, txHash: Hash) {
+  await fetch(`${BACKEND}/v1/claims/record`, {
+    method: "POST", headers: authed(token), body: JSON.stringify({ txHash }),
+  }).catch(() => {}); // non-blocking; the history simply lags until retried
+}

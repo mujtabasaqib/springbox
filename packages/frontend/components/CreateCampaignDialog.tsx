@@ -88,7 +88,7 @@ const setN = (k: keyof typeof native) => (e: React.ChangeEvent<HTMLInputElement>
           <div className="space-y-4">
             <div>
               <Label>Total budget (USDC)</Label>
-              <Input type="number" value={form.budget} onChange={set("budget")} placeholder="20000" />
+              <Input type="number" value={form.budget} onChange={set("budget")} placeholder="10" />
             </div>
             <div>
               <Label>Payout per 1,000 views (USDC)</Label>

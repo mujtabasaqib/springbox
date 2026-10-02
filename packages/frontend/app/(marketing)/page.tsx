@@ -47,7 +47,7 @@ export default async function Home() {
 
       <Section id="campaigns">
         <h2 className="display text-5xl md:text-6xl">Live campaigns</h2>
-        <p className="mb-10 mt-4 max-w-md text-muted">Pick one that fits your audience. Payouts are per 1,000 verified views.</p>
+        <p className="mb-10 mt-4 max-w-md text-muted">Payouts are per 1,000 verified views.</p>
         <CampaignBoard campaigns={campaigns} />
       </Section>
 
