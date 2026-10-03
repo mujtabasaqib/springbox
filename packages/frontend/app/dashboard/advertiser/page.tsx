@@ -4,6 +4,9 @@ import CreateCampaignDialog from "@/components/CreateCampaignDialog";
 import FundCampaignButton from "@/components/FundCampaignButton";
 import { getAdvertiserStats, getAdCampaigns } from "@/lib/data/advertiser";
 import FaucetButton from "@/components/FaucetButton";
+import EndCampaignButton from "@/components/EndCampaignButton";
+
+export const dynamic = "force-dynamic"; // otherwise Next may serve cached data after router.refresh()
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
@@ -53,10 +56,17 @@ export default async function AdvertiserDashboard() {
                   </td>
                   <td className="py-3 font-mono">{c.clicks.toLocaleString("en-US")}</td>
                   <td className="py-3 text-right">
-                    {c.status === "draft" && (
-                      <FundCampaignButton campaignId={c.id} advertiserId={c.advertiserId} budget={c.budget} />
-                    )}
-                  </td>
+  {c.status === "draft" && (
+    <FundCampaignButton campaignId={c.id} advertiserId={c.advertiserId} budget={c.budget} />
+  )}
+  {c.status === "live" && <EndCampaignButton campaignId={c.id} />}
+  {c.status === "ended" && (
+    <span className="font-mono text-xs text-muted">Refund pending · {usd(c.budget - c.spent)}</span>
+  )}
+  {c.status === "refunded" && (
+    <span className="font-mono text-xs text-muted">Refunded {usd(c.budget - c.spent)}</span>
+  )}
+</td>
                 </tr>
               );
             })}

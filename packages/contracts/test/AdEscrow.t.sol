@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AdEscrow} from "../src/AdEscrow.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
+import {MockUSDCPermit} from "./mocks/MockUSDCPermit.sol";
 
 contract AdEscrowTest is Test {
     MockUSDC usdc;
@@ -143,5 +144,137 @@ contract AdEscrowTest is Test {
 
         assertEq(usdc.balanceOf(viewer), 25e6);
         assertEq(escrow.claimed(viewer), 25e6);
+    }
+
+        // ---------- Flow D: permit funding (one tx) ----------
+
+    function _signPermit(MockUSDCPermit t, uint256 pk, address owner_, address spender, uint256 value, uint256 deadline)
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                owner_,
+                spender,
+                value,
+                t.nonces(owner_),
+                deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", t.DOMAIN_SEPARATOR(), structHash));
+        (v, r, s) = vm.sign(pk, digest);
+    }
+
+    function test_CreateCampaignWithPermit_SingleTx() public {
+        MockUSDCPermit pusdc = new MockUSDCPermit();
+        AdEscrow pescrow = new AdEscrow(IERC20(address(pusdc)), operator, MIN_CLAIM);
+        (address adv, uint256 pk) = makeAddrAndKey("permitAdvertiser");
+        pusdc.mint(adv, BUDGET);
+
+        uint256 deadline = block.timestamp + 1 hours;
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(pusdc, pk, adv, address(pescrow), BUDGET, deadline);
+
+        vm.prank(adv);
+        uint256 id = pescrow.createCampaignWithPermit(BUDGET, deadline, v, r, s);
+
+        assertEq(id, 1);
+        assertEq(pusdc.balanceOf(address(pescrow)), BUDGET);
+        assertEq(pescrow.totalDeposited(), BUDGET);
+    }
+
+    function test_CreateCampaignWithPermit_SurvivesFrontRunPermit() public {
+        MockUSDCPermit pusdc = new MockUSDCPermit();
+        AdEscrow pescrow = new AdEscrow(IERC20(address(pusdc)), operator, MIN_CLAIM);
+        (address adv, uint256 pk) = makeAddrAndKey("permitAdvertiser");
+        pusdc.mint(adv, BUDGET);
+
+        uint256 deadline = block.timestamp + 1 hours;
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(pusdc, pk, adv, address(pescrow), BUDGET, deadline);
+
+        // someone else submits the permit first; the funding call must still succeed
+        vm.prank(stranger);
+        pusdc.permit(adv, address(pescrow), BUDGET, deadline, v, r, s);
+
+        vm.prank(adv);
+        pescrow.createCampaignWithPermit(BUDGET, deadline, v, r, s);
+        assertEq(pusdc.balanceOf(address(pescrow)), BUDGET);
+    }
+
+    // ---------- Flow E: refund of unspent budget ----------
+
+    function test_Refund_ReturnsUnspentToAdvertiser() public {
+        _fund();
+        _publish(0, 100e6); // 100 USDC promised to creators
+
+        uint256 unspent = BUDGET - 100e6;
+
+        vm.expectEmit(true, true, false, true);
+        emit AdEscrow.Refunded(1, advertiser, unspent);
+        vm.prank(operator);
+        escrow.refund(1, advertiser, unspent);
+
+        assertEq(usdc.balanceOf(advertiser), unspent);
+        assertEq(escrow.totalDeposited(), 100e6);
+        assertEq(usdc.balanceOf(address(escrow)), 100e6);
+    }
+
+    function test_Refund_OnlyOperator() public {
+        _fund();
+        vm.prank(stranger);
+        vm.expectRevert(AdEscrow.NotOperator.selector);
+        escrow.refund(1, advertiser, 1e6);
+    }
+
+    function test_Refund_CannotDipIntoAllocated() public {
+        _fund();
+        _publish(0, 100e6);
+
+        // one unit more than the unallocated remainder
+        vm.prank(operator);
+        vm.expectRevert(AdEscrow.RefundExceedsUnallocated.selector);
+        escrow.refund(1, advertiser, BUDGET - 100e6 + 1);
+    }
+
+    function test_Refund_RejectsZeroAndUnknownCampaign() public {
+        _fund();
+
+        vm.startPrank(operator);
+        vm.expectRevert(AdEscrow.ZeroAmount.selector);
+        escrow.refund(1, advertiser, 0);
+
+        vm.expectRevert(AdEscrow.UnknownCampaign.selector);
+        escrow.refund(2, advertiser, 1e6);
+
+        vm.expectRevert(AdEscrow.UnknownCampaign.selector);
+        escrow.refund(0, advertiser, 1e6);
+        vm.stopPrank();
+    }
+
+    function test_Refund_CreatorStillClaimsInFull() public {
+        _fund();
+        (bytes32 viewerLeaf,) = _publish(0, 100e6);
+
+        vm.prank(operator);
+        escrow.refund(1, advertiser, BUDGET - 100e6);
+
+        vm.prank(creator);
+        escrow.claim(100e6, _proof(viewerLeaf));
+        assertEq(usdc.balanceOf(creator), 100e6);
+        assertEq(usdc.balanceOf(address(escrow)), 0);
+    }
+
+    function test_Refund_LowersCapForFutureEpochs() public {
+        _fund();
+        _publish(0, 100e6);
+
+        vm.prank(operator);
+        escrow.refund(1, advertiser, BUDGET - 100e6);
+
+        // deposits are now 100 USDC, so allocating more than that reverts
+        vm.prank(operator);
+        vm.expectRevert(AdEscrow.OverAllocated.selector);
+        escrow.publishEpoch(bytes32(uint256(1)), 100e6 + 1);
     }
 }

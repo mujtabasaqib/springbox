@@ -4,11 +4,11 @@ import { supabase } from "@/lib/supabase";
 export type AdCampaign = {
   id: string;
   title: string;
-  status: "draft" | "live" | "paused" | "ending" | "ended";
+  status: "draft" | "live" | "paused" | "ending" | "ended" | "refunded";
   budget: number;
   spent: number;
-  impressions: number; // TODO: not tracked yet — needs a backend endpoint over eventLog
-  clicks: number;       // TODO: same
+  impressions: number; 
+  clicks: number;     
   advertiserId: string | null;
 };
 

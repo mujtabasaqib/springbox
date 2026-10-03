@@ -1,16 +1,37 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import type { Hex } from 'viem';
+import { parseAbi, parseAbiItem, type Hex } from 'viem';
 import { supabase } from './supabase';
 import { ESCROW, escrowAbi, operator, publicClient, walletClient } from './chain';
 
-// Keep in sync with index.ts
-const RATE_PER_VIEW = 0.0005;
 const USDC_UNITS = 1_000_000;
 
-// Round DOWN so we never promise more than the DB says was earned.
+const CAMPAIGN_CHAIN_ID_COL = 'onchain_campaign_id'; // campaigns.<this> = onchain id
+const JOINS_CAMPAIGN_COL = 'campaign_id'; // campaign_joins.<this> = campaigns.id
+const ENDED_STATUS = 'ended'; // set by your "End campaign" route; stop crediting views at the same time
+const REFUNDED_STATUS = 'refunded';
+
+// Block the escrow was deployed at, to keep getLogs ranges small on public RPCs.
+const DEPLOY_BLOCK = BigInt(process.env.ESCROW_DEPLOY_BLOCK ?? 0);
+
+const refundAbi = parseAbi(['function refund(uint256 campaignId, address advertiser, uint256 amount)']);
+const fundedEvent = parseAbiItem(
+  'event CampaignFunded(uint256 indexed campaignId, address indexed advertiser, uint256 budget)'
+);
+const refundedEvent = parseAbiItem(
+  'event Refunded(uint256 indexed campaignId, address indexed advertiser, uint256 amount)'
+);
+
+// Leaves round DOWN (never promise more than earned)...
 const toUnits = (usdc: number) => BigInt(Math.floor(usdc * USDC_UNITS));
+// ...campaign spend rounds UP (never refund money that creators may have earned).
+const toUnitsCeil = (usdc: number) => BigInt(Math.ceil(usdc * USDC_UNITS));
 
 export async function runEpoch() {
+  await publishStep();
+  await refundEndedCampaigns(); // runs even when there was nothing new to publish
+}
+
+async function publishStep() {
   // 1. On-chain state
   const [chainEpoch, chainAllocated, deposited] = await Promise.all([
     publicClient.readContract({ address: ESCROW, abi: escrowAbi, functionName: 'epoch' }),
@@ -39,7 +60,7 @@ export async function runEpoch() {
     for (const r of data ?? []) totals.set(r.address, BigInt(r.cumulative_amount));
   }
 
-  // 4. DID -> wallet (fine locally; paginate once you pass 1000 rows)
+  // 4. DID -> wallet (paginate once you pass 1000 rows)
   const { data: profiles, error: pErr } = await supabase
     .from('profiles')
     .select('privy_did, wallet_address')
@@ -49,24 +70,13 @@ export async function runEpoch() {
     (profiles ?? []).map((p) => [p.privy_did, String(p.wallet_address).toLowerCase()])
   );
 
-  // 5. Total earned per DID, in base units
+  // 5. Total earned per creator DID, in base units (viewer pool removed for v1)
   const earned = new Map<string, bigint>();
-  const add = (did: string, amt: bigint) => earned.set(did, (earned.get(did) ?? 0n) + amt);
-
-  //    creators: sum of campaign_joins.earned (assumed to be USDC, e.g. 100 = 100 USDC)
   const { data: joins, error: jErr } = await supabase.from('campaign_joins').select('creator_id, earned');
   if (jErr) throw jErr;
-  for (const j of joins ?? []) add(j.creator_id, toUnits(Number(j.earned)));
-
-  //    viewers: equal share of the pool. Split by ALL members so shares don't jump
-  //    when wallets get linked later.
-  const [{ data: pool }, { data: members }] = await Promise.all([
-    supabase.from('reward_pool').select('verified_views').eq('id', 1).single(),
-    supabase.from('reward_members').select('privy_did'),
-  ]);
-  const memberCount = Math.max(1, members?.length ?? 1);
-  const viewerShare = toUnits((Number(pool?.verified_views ?? 0) * RATE_PER_VIEW) / memberCount);
-  for (const m of members ?? []) add(m.privy_did, viewerShare);
+  for (const j of joins ?? []) {
+    earned.set(j.creator_id, (earned.get(j.creator_id) ?? 0n) + toUnits(Number(j.earned)));
+  }
 
   // 6. Merge into one leaf per address: max(previous, new)
   let skipped = 0;
@@ -127,4 +137,80 @@ export async function runEpoch() {
     `Epoch ${newEpoch} published: ${rows.length} leaves, total ${total} units, ` +
       `${skipped} earners skipped (no wallet), tx ${hash}`
   );
+}
+
+/**
+ * For every campaign marked 'ended': refund = budget - (everything creators earned on it).
+ * Spend counts ALL joins, including creators without a linked wallet, so their money
+ * stays reserved in the contract. Idempotent: the Refunded event is the source of truth.
+ */
+async function refundEndedCampaigns() {
+  const { data: ended, error } = await supabase.from('campaigns').select('*').eq('status', ENDED_STATUS);
+  if (error) throw error;
+
+  for (const c of ended ?? []) {
+    try {
+      const onchainId = BigInt(c[CAMPAIGN_CHAIN_ID_COL]);
+
+      // Already refunded onchain? Just fix the DB status (covers a failed DB update after a tx).
+      const done = await publicClient.getLogs({
+        address: ESCROW,
+        event: refundedEvent,
+        args: { campaignId: onchainId },
+        fromBlock: DEPLOY_BLOCK,
+      });
+      if (done.length) {
+        await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
+        console.log(`Campaign ${c.id}: already refunded onchain, status synced.`);
+        continue;
+      }
+
+      // Advertiser + budget come from the funding event, not the DB.
+      const funded = await publicClient.getLogs({
+        address: ESCROW,
+        event: fundedEvent,
+        args: { campaignId: onchainId },
+        fromBlock: DEPLOY_BLOCK,
+      });
+      if (!funded.length) {
+        console.warn(`Campaign ${c.id}: no CampaignFunded log for onchain id ${onchainId}, skipping.`);
+        continue;
+      }
+      const { advertiser, budget } = funded[0].args as { advertiser: Hex; budget: bigint };
+
+      // Everything creators earned on this campaign, rounded up.
+      const { data: joins, error: jErr } = await supabase
+        .from('campaign_joins')
+        .select('earned')
+        .eq(JOINS_CAMPAIGN_COL, c.id);
+      if (jErr) throw jErr;
+      
+      let spent = toUnitsCeil(Number(c.spent));
+      if (spent > budget) spent = budget; // can't refund below zero
+
+      const amount = budget - spent;
+      if (amount === 0n) {
+        await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
+        console.log(`Campaign ${c.id}: fully spent, nothing to refund.`);
+        continue;
+      }
+
+      const { request } = await publicClient.simulateContract({
+        account: operator,
+        address: ESCROW,
+        abi: refundAbi,
+        functionName: 'refund',
+        args: [onchainId, advertiser, amount],
+      });
+      const hash = await walletClient.writeContract(request);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== 'success') throw new Error(`refund reverted: ${hash}`);
+
+      await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
+      console.log(`Campaign ${c.id}: refunded ${amount} units to ${advertiser}, tx ${hash}`);
+    } catch (e) {
+      // One bad campaign (e.g. a blacklisted advertiser address) must not block the others.
+      console.error(`Campaign ${c.id}: refund failed:`, e);
+    }
+  }
 }

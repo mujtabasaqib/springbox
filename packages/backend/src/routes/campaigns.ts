@@ -150,4 +150,27 @@ router.post('/:id/fund', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/:id/end', async (req: Request, res: Response) => {
+  const did = await verifyPrivyToken(req.headers.authorization);
+  if (!did) return res.status(401).json({ error: 'unauthorized' });
+
+  // Atomic: only the owner, and only a live campaign, can be ended (double-clicks are harmless).
+  const { data, error } = await supabase
+    .from('campaigns')
+    .update({ status: 'ended', ended_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('advertiser_id', did)
+    .eq('status', 'live')
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('[end]', error);
+    return res.status(500).json({ error: 'failed to end campaign' });
+  }
+  if (!data) return res.status(409).json({ error: 'campaign not found or not live' });
+
+  res.json({ campaign: data }); // status 'ended' = refund pending until the next epoch run
+});
+
 export default router;
