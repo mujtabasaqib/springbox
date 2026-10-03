@@ -25,11 +25,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
   if (!role || role === "loading") return;
-
-  if (role === "user") {
-    router.replace("/rewards");
-    return;
-  }
   
   if (pathname === "/dashboard") {
     router.replace(role === "advertiser" ? "/dashboard/advertiser" : "/dashboard/creator");

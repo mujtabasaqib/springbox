@@ -6,7 +6,6 @@ import claimRoutes from "./routes/claims";
 import eventRoutes from "./routes/events";
 import profilesRoutes from "./routes/profiles";
 import publisherRoutes from "./routes/publisher";
-import rewardRoutes from "./routes/rewards";
 import faucetRoutes from "./routes/faucet";
 
 const app = express();
@@ -28,7 +27,6 @@ app.use("/v1/claims", claimRoutes);
 app.use("/v1/events", eventRoutes);
 app.use("/v1/profiles", profilesRoutes);
 app.use("/v1/publisher", publisherRoutes);
-app.use("/v1/rewards", rewardRoutes);
 app.use("/v1/faucet", faucetRoutes);
 
 const PORT = Number(process.env.PORT ?? 4000);

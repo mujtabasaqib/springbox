@@ -18,7 +18,7 @@ export default function Navbar() {
   const wasAuthenticated = useRef(authenticated);
 
   useEffect(() => {
-    if (!wasAuthenticated.current && authenticated && pathname !== "/rewards") {
+    if (!wasAuthenticated.current && authenticated) {
       router.push("/dashboard");
     }
     wasAuthenticated.current = authenticated;
