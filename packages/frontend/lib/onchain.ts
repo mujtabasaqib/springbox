@@ -1,6 +1,6 @@
 import type { ConnectedWallet } from "@privy-io/react-auth";
 import type { Address, Hash } from "viem";
-import { chain, ESCROW, USDC, erc20Abi, escrowAbi, publicClient, toUnits, walletClientFor } from "@/lib/chain";
+import { chain, ESCROW, USDC, erc20Abi, escrowAbi, publicClient, toUnits, walletClientFor, feeBuffer } from "@/lib/chain";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
 const authed = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
@@ -34,12 +34,14 @@ export async function fundOnchain(opts: {
     opts.onStep("Approving USDC…");
     const approveHash = await client.writeContract({
       address: USDC, abi: erc20Abi, functionName: "approve", args: [ESCROW, units], account, chain,
+      ...(await feeBuffer()),
     });
     await publicClient.waitForTransactionReceipt({ hash: approveHash });
 
     opts.onStep("Funding campaign…");
     txHash = await client.writeContract({
       address: ESCROW, abi: escrowAbi, functionName: "createCampaign", args: [units], account, chain,
+      ...(await feeBuffer()),
     });
     await publicClient.waitForTransactionReceipt({ hash: txHash });
     opts.onTx(txHash); // keep it so a backend failure can be retried without paying twice
@@ -83,6 +85,7 @@ export async function claimOnchain(wallet: ConnectedWallet, s: ClaimState) {
     args: [BigInt(s.cumulativeAmount!), s.proof!],
     account: wallet.address as Address,
     chain,
+    ...(await feeBuffer()),
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
@@ -111,6 +114,7 @@ export async function sendUsdc(wallet: ConnectedWallet, to: Address, units: bigi
   const hash = await client.writeContract({
     address: USDC, abi: erc20Abi, functionName: "transfer", args: [to, units],
     account: wallet.address as Address, chain,
+    ...(await feeBuffer()),
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;

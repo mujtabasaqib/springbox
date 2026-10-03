@@ -4,21 +4,20 @@ pragma solidity ^0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AdEscrow} from "../src/AdEscrow.sol";
-import {MockUSDC} from "../test/mocks/MockUSDC.sol";
+import {MockUSDCPermit} from "../test/mocks/MockUSDCPermit.sol";
 
 contract Deploy is Script {
     function run() external {
-        uint256 pk = vm.envUint("DEPLOYER_PK");
-        address operator = vm.envAddress("OPERATOR_ADDRESS");
+        uint256 pk = vm.envUint("DEPLOYER_SEPOLIA_PK");
+        address operator = vm.envAddress("OPERATOR_SEPOLIA_ADDRESS");
         uint256 minClaim = vm.envOr("MIN_CLAIM", uint256(5e6));
         address usdc = vm.envOr("USDC_ADDRESS", address(0));
         address fundTo = vm.envOr("FUND_ADDRESS", address(0));
 
         vm.startBroadcast(pk);
 
-        // No real USDC configured, so deploy the mock and mint test funds.
         if (usdc == address(0)) {
-            MockUSDC mock = new MockUSDC();
+            MockUSDCPermit mock = new MockUSDCPermit();
             usdc = address(mock);
             if (fundTo != address(0)) mock.mint(fundTo, 10_000e6);
         }

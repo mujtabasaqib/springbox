@@ -9,7 +9,7 @@ export const USDC = process.env.NEXT_PUBLIC_USDC_ADDRESS as Address;
 
 export const chain = defineChain({
   id: CHAIN_ID,
-  name: CHAIN_ID === 31337 ? "Anvil" : "Configured chain",
+  name: CHAIN_ID === 421614 ? "Arbitrum Sepolia" : "Configured chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_RPC_URL!] } },
 });
@@ -51,4 +51,9 @@ export function errMsg(e: unknown, fallback = "Transaction failed") {
   if (rejected) return "Transaction cancelled";
   if (err.shortMessage) return err.shortMessage;
   return (err.message ?? fallback).split("\n")[0].slice(0, 120);
+}
+
+export async function feeBuffer() {
+  const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
+  return { maxFeePerGas: maxFeePerGas * 2n, maxPriorityFeePerGas };
 }

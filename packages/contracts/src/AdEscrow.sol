@@ -31,9 +31,9 @@ contract AdEscrow {
     address public immutable operator;
     uint256 public immutable minClaim;
 
-    uint256 public campaignCount; // ids start at 1
-    uint256 public totalDeposited; // deposits minus refunds
-    uint256 public totalAllocated; // cumulative amount promised by the latest root
+    uint256 public campaignCount; 
+    uint256 public totalDeposited; 
+    uint256 public totalAllocated; 
     uint256 public epoch;
     bytes32 public merkleRoot;
     mapping(address => uint256) public claimed;
@@ -49,14 +49,10 @@ contract AdEscrow {
         minClaim = _minClaim;
     }
 
-    /// Advertiser deposits `budget` (caller must have approved). Returns the new campaign id.
     function createCampaign(uint256 budget) external returns (uint256) {
         return _createCampaign(budget);
     }
 
-    /// One-tx funding: advertiser signs an EIP-2612 permit offchain, then calls this.
-    /// The permit is wrapped in try/catch so a front-run permit (allowance already set)
-    /// doesn't make the call revert.
     function createCampaignWithPermit(uint256 budget, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
         returns (uint256)
@@ -76,7 +72,6 @@ contract AdEscrow {
         emit CampaignFunded(campaignId, msg.sender, budget);
     }
 
-    /// Operator replaces the root. `_totalAllocated` is cumulative and must be <= totalDeposited.
     function publishEpoch(bytes32 root, uint256 _totalAllocated) external onlyOperator {
         if (_totalAllocated > totalDeposited) revert OverAllocated();
         if (_totalAllocated < totalAllocated) revert AllocationDecreased();
@@ -88,9 +83,6 @@ contract AdEscrow {
         emit EpochPublished(newEpoch, root, _totalAllocated);
     }
 
-    /// Operator returns the unspent part of an ended campaign to its advertiser.
-    /// Stores nothing new: `campaignId` is only emitted so offchain code can dedupe.
-    /// Can never touch money already promised to creators in the current root.
     function refund(uint256 campaignId, address advertiser, uint256 amount) external onlyOperator {
         if (amount == 0) revert ZeroAmount();
         if (campaignId == 0 || campaignId > campaignCount) revert UnknownCampaign();
@@ -102,8 +94,6 @@ contract AdEscrow {
         emit Refunded(campaignId, advertiser, amount);
     }
 
-    /// Pays `cumulativeAmount - claimed[msg.sender]`.
-    /// Leaf = keccak256(bytes.concat(keccak256(abi.encode(account, cumulativeAmount)))).
     function claim(uint256 cumulativeAmount, bytes32[] calldata proof) external {
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, cumulativeAmount))));
         if (!MerkleProof.verifyCalldata(proof, merkleRoot, leaf)) revert InvalidProof();
