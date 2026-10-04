@@ -1,0 +1,31 @@
+#.github/workflows/epoch.yml
+name: epoch
+on:
+  schedule:
+    - cron: "0 19 * * *"   # daily, 00:00 UTC+5
+  workflow_dispatch:
+concurrency: epoch
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/backend/package-lock.json
+      - run: npm ci
+      - run: npm run epoch
+        env:
+          OPERATOR_PRIVATE_KEY: ${{ secrets.OPERATOR_PRIVATE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          RPC_URL: ${{ secrets.RPC_URL }}
+          CHAIN_ID: ${{ secrets.CHAIN_ID }}
+          ESCROW_DEPLOY_BLOCK: ${{ secrets.ESCROW_DEPLOY_BLOCK }}
+          ESCROW_ADDRESS: ${{ secrets.ESCROW_ADDRESS }}
+          USDC_ADDRESS: ${{ secrets.USDC_ADDRESS }}
