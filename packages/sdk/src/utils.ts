@@ -22,5 +22,5 @@ export function isSafeUrl(u: string): boolean {
 }
 
 export function log(cfg: ResolvedConfig, ...args: unknown[]) {
-  if (cfg.debug) console.log('[web3ads]', ...args);
+  //if (cfg.debug) console.log('[web3ads]', ...args);
 }

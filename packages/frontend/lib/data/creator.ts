@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { Campaign } from "@/lib/data/campaigns";
 import { getClaimState } from "@/lib/onchain";
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BACKEND = "";
 
 export type Payout = { id: string; date: string; amount: number; status: "claimed" | "pending"; kind?: "claim" | "withdraw"; };
 export type JoinedCampaign = { id: string; brand: string; title: string; status: Campaign["status"]; earned: number; views: number };
@@ -43,7 +43,7 @@ export const getJoinedCampaigns = async (creatorId: string): Promise<JoinedCampa
 
 // ---- payouts (on-chain backed) ----
 const getPayoutHistory = async (token: string): Promise<Payout[]> => {
-  const res = await fetch(`${BACKEND}/v1/claims/history`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`/v1/claims/history`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) return [];
   return (await res.json()).payouts ?? [];
 };

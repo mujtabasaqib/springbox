@@ -15,7 +15,7 @@ export default function EndCampaignButton({ campaignId }: { campaignId: string }
     setErr(null);
     try {
       const token = await getAccessToken();
-      const r = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/campaigns/${campaignId}/end`, {
+      const r = await fetch(`/v1/campaigns/${campaignId}/end`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

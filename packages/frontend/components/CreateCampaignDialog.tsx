@@ -9,8 +9,8 @@ import { usePrivy } from "@privy-io/react-auth";
 import AdPreview from "@/components/AdPreview";
 
 const steps = ["Details", "Budget", "Creative", "Review"];
-const categories = ["defi", "gaming", "nft", "infra"];
-const ctaPresets = ["Learn more", "Sign up", "Mint", "Trade", "Get started"];
+const categories = ["defi", "marketing", "gaming", "nft", "infra", "general", "rwa", "tradfi", "cards"];
+const ctaPresets = ["Learn more", "Sign up", "Buy now", "Trade", "Get started"];
 
 export default function CreateCampaignDialog() {
    const { getAccessToken } = usePrivy(); 
@@ -40,7 +40,7 @@ const setN = (k: keyof typeof native) => (e: React.ChangeEvent<HTMLInputElement>
       creativeType === "native"
         ? { ...form, creativeType: "native", native }
         : { ...form, creativeType: "image", imageUrl: await uploadCreative(imageFile!) };
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/campaigns`, {
+    const res = await fetch(`/v1/campaigns`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

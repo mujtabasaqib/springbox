@@ -2,7 +2,7 @@ import type { ConnectedWallet } from "@privy-io/react-auth";
 import type { Address, Hash } from "viem";
 import { chain, ESCROW, USDC, erc20Abi, escrowAbi, publicClient, toUnits, walletClientFor, feeBuffer } from "@/lib/chain";
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BACKEND = "";
 const authed = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
 
 async function apiError(res: Response, fallback: string) {
