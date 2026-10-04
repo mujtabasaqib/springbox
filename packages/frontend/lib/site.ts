@@ -1,5 +1,5 @@
 export const site = {
-  name: "Stackd", 
+  name: "SpringBox", 
   links: [
     ["Campaigns", "/"],
     ["How it works", "/how-it-works"],

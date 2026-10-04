@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 
 const blocks = [
   { t: "Paid on-chain", c: "bg-brand-a text-ink", w: "w-56", dx: 16 },
-  { t: "1,284 creators", c: "bg-brand-b text-white", w: "w-64", dx: -8 },
-  { t: "$48k escrowed", c: "bg-ink text-white", w: "w-72", dx: 8 },
+  { t: "128 creators", c: "bg-brand-b text-white", w: "w-64", dx: -8 },
+  { t: "$4.8k escrowed", c: "bg-ink text-white", w: "w-72", dx: 8 },
   { t: "Campaign live", c: "border border-line bg-surface text-ink", w: "w-80", dx: 0 },
 ];
 

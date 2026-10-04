@@ -10,7 +10,6 @@ const values = [
   ["Fair", "The people who create the value get paid for it."],
   ["Simple", "Web3 under the hood, plain language on top."],
 ];
-const team = [["MS", "Founder"]];
 
 export default function About() {
   return (
@@ -47,18 +46,7 @@ export default function About() {
         </div>
       </Section>
 
-      <Section tone="b">
-        <h2 className="display text-5xl md:text-6xl">The team</h2>
-        <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {team.map(([n, r]) => (
-            <div key={n} className="rounded-3xl bg-white/10 p-6">
-              <span className="display grid size-16 place-items-center rounded-2xl bg-brand-a text-2xl text-ink">{n[0]}</span>
-              <p className="mt-6 font-semibold">{n}</p>
-              <p className="text-sm text-white/60">{r}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      
     </>
   );
 }

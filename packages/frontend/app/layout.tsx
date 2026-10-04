@@ -12,8 +12,8 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
-  title: `${site.name} | Ads that pay everyone`,
-  description: "A web3 ad platform where brands fund campaigns and creators earn on-chain.",
+  title: `${site.name} | Ads that work`,
+  description: "A web3 ad platform where sponsors fund campaigns and creators earn on-chain.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

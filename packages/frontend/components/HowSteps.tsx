@@ -3,14 +3,14 @@ import { useEffect, useRef, useState } from "react";
 
 const tracks = {
   Advertiser: [
-    ["Connect a wallet", "Sign in with any major wallet. No forms, no approvals."],
-    ["Fund your campaign", "Set a budget and a payout per 1,000 views. Funds lock in a smart contract."],
-    ["Creators go live", "Creators join your campaign and share it with their audience."],
+    ["Connect a wallet", "Sign in with any major wallet. No strings attached."],
+    ["Fund your ad", "Set a budget and a payout. Funds go in a smart contract refund any amount that is not spent."],
+    ["Creators go live", "Creators get a snippet and ads are served to audience every verified view earns."],
     ["Track and settle", "Watch verified results in real time. Unspent budget stays yours."],
   ],
   Creator: [
-    ["Connect a wallet", "This is where your earnings arrive. There's nothing else to sign up for."],
-    ["Pick a campaign", "Browse live campaigns and join the ones that fit your audience."],
+    ["Sign up", "Use your email to login no wallets no hassle funds are yours withdraw anytime."],
+    ["Get your snippet", "Copy your snippet, customize your snippet, paste your snippet in your site and done, start earning."],
     ["Share it", "Post with your tracked link. Every view is verified."],
     ["Claim your payout", "Claim earnings to your wallet any time."],
   ],

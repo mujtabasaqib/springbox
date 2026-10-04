@@ -6,11 +6,11 @@ import Faq from "@/components/Faq";
 import { getCampaigns } from "@/lib/data/campaigns";
 
 const btn = "rounded-full px-7 py-4 font-semibold transition hover:-translate-y-0.5";
-const stats = [["$4.2M", "paid to creators"], ["1,284", "active creators"], ["312", "live campaigns"]];
+const stats = [["$4.2k", "paid to creators"], ["110", "active creators"], ["32", "live campaigns"]];
 const steps = [
-  ["Fund", "Brands lock a budget in a smart contract."],
-  ["Join", "Creators pick campaigns and share them."],
-  ["Earn", "Verified views trigger automatic payouts."],
+  ["Fund", "Advertisers spend per view any cent not spent goes back to you"],
+  ["Join", "Creators paste a snippet and start earning"],
+  ["Earn", "Verified views trigger automatic payouts"],
 ];
 
 export default async function Home() {
@@ -21,12 +21,12 @@ export default async function Home() {
       <Section>
         <div className="grid items-center gap-16 lg:grid-cols-2">
           <div>
-            <h1 className="display text-6xl md:text-7xl xl:text-[5.5rem]">Ads that pay everyone, on-chain.</h1>
+            <h1 className="display text-6xl md:text-7xl xl:text-[5.5rem]">Ads that work for you, <br/>on-chain.</h1>
             <p className="mt-6 max-w-md text-lg text-muted">
-              Brands fund campaigns. Creators join and earn. Every payout is transparent and settled automatically.
+              Sponsors fund campaigns. Creators join and earn. Every payout is transparent and settled automatically.
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link href="#campaigns" className={`${btn} bg-brand-a`}>Start earning</Link>
+              <Link href="/dashboard/creator" className={`${btn} bg-brand-a`}>Start earning</Link>
               <Link href="/dashboard/advertiser" className={`${btn} border border-ink`}>Launch a campaign</Link>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default async function Home() {
 
       <Section id="campaigns">
         <h2 className="display text-5xl md:text-6xl">Live campaigns</h2>
-        <p className="mb-10 mt-4 max-w-md text-muted">Payouts are per 1,000 verified views.</p>
+        <p className="mb-10 mt-4 max-w-md text-muted">Payouts are per verified views.</p>
         <CampaignBoard campaigns={campaigns} />
       </Section>
 
