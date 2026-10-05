@@ -1,5 +1,5 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import { parseAbi, parseAbiItem, type Hex } from 'viem';
+import { parseAbi, parseAbiItem, parseEventLogs, type Hex } from 'viem';
 import { supabase } from './supabase';
 import { ESCROW, escrowAbi, operator, publicClient, walletClient } from './chain';
 
@@ -152,65 +152,68 @@ async function refundEndedCampaigns() {
     try {
       const onchainId = BigInt(c[CAMPAIGN_CHAIN_ID_COL]);
 
-      // Already refunded onchain? Just fix the DB status (covers a failed DB update after a tx).
-      const done = await publicClient.getLogs({
-        address: ESCROW,
-        event: refundedEvent,
-        args: { campaignId: onchainId },
-        fromBlock: DEPLOY_BLOCK,
-      });
-      if (done.length) {
-        await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
-        console.log(`Campaign ${c.id}: already refunded onchain, status synced.`);
+      // Advertiser + budget come from the funding tx receipt
+      const fundReceipt = await publicClient.getTransactionReceipt({ hash: c.fund_tx_hash });
+      const fundedLog = parseEventLogs({ abi: [fundedEvent], eventName: 'CampaignFunded', logs: fundReceipt.logs })
+        .find((l) => l.args.campaignId === onchainId);
+      if (!fundedLog) {
+        console.warn(`Campaign ${c.id}: no CampaignFunded in fund tx, skipping.`);
         continue;
       }
+      const { advertiser, budget } = fundedLog.args;
 
-      // Advertiser + budget come from the funding event, not the DB.
-      const funded = await publicClient.getLogs({
-        address: ESCROW,
-        event: fundedEvent,
-        args: { campaignId: onchainId },
-        fromBlock: DEPLOY_BLOCK,
-      });
-      if (!funded.length) {
-        console.warn(`Campaign ${c.id}: no CampaignFunded log for onchain id ${onchainId}, skipping.`);
-        continue;
-      }
-      const { advertiser, budget } = funded[0].args as { advertiser: Hex; budget: bigint };
-
-      // Everything creators earned on this campaign, rounded up.
-      const { data: joins, error: jErr } = await supabase
-        .from('campaign_joins')
-        .select('earned')
-        .eq(JOINS_CAMPAIGN_COL, c.id);
-      if (jErr) throw jErr;
-      
       let spent = toUnitsCeil(Number(c.spent));
-      if (spent > budget) spent = budget; // can't refund below zero
-
+      if (spent > budget) spent = budget;
       const amount = budget - spent;
+
       if (amount === 0n) {
         await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
         console.log(`Campaign ${c.id}: fully spent, nothing to refund.`);
         continue;
       }
 
-      const { request } = await publicClient.simulateContract({
-        account: operator,
-        address: ESCROW,
-        abi: refundAbi,
-        functionName: 'refund',
-        args: [onchainId, advertiser, amount],
-      });
-      const hash = await walletClient.writeContract(request);
+      let hash: Hex;
+      try {
+        const { request } = await publicClient.simulateContract({
+          account: operator,
+          address: ESCROW,
+          abi: refundAbi,
+          functionName: 'refund',
+          args: [onchainId, advertiser, amount],
+        });
+        hash = await walletClient.writeContract(request);
+      } catch (simErr) {
+        // Simulation failed: maybe it was already refunded (DB update failed last run).
+        // Only now do the (chunked) log scan, so the normal path makes no getLogs call.
+        if (await alreadyRefunded(onchainId, fundReceipt.blockNumber)) {
+          await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
+          console.log(`Campaign ${c.id}: already refunded onchain, status synced.`);
+          continue;
+        }
+        throw simErr;
+      }
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== 'success') throw new Error(`refund reverted: ${hash}`);
 
       await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
       console.log(`Campaign ${c.id}: refunded ${amount} units to ${advertiser}, tx ${hash}`);
     } catch (e) {
-      // One bad campaign (e.g. a blacklisted advertiser address) must not block the others.
       console.error(`Campaign ${c.id}: refund failed:`, e);
     }
   }
+}
+
+// Fallback only: scans in <=9k-block chunks to match RPC's limit
+async function alreadyRefunded(campaignId: bigint, fromBlock: bigint) {
+  const STEP = 9_000n;
+  const latest = await publicClient.getBlockNumber();
+  for (let from = fromBlock; from <= latest; from += STEP) {
+    const to = from + STEP - 1n > latest ? latest : from + STEP - 1n;
+    const logs = await publicClient.getLogs({
+      address: ESCROW, event: refundedEvent, args: { campaignId }, fromBlock: from, toBlock: to,
+    });
+    if (logs.length) return true;
+  }
+  return false;
 }
