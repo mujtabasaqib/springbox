@@ -7,12 +7,11 @@ export type AdCampaign = {
   status: "draft" | "live" | "paused" | "ending" | "ended" | "refunded";
   budget: number;
   spent: number;
-  impressions: number; 
-  clicks: number;     
+  impressions: number;
+  clicks: number;
   advertiserId: string | null;
 };
 
-//lib/data/advertiser.ts
 export const getAdCampaigns = async (): Promise<AdCampaign[]> => {
   const [{ data, error }, { data: stats }] = await Promise.all([
     supabase

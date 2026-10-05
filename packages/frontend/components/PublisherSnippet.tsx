@@ -33,7 +33,7 @@ export default function PublisherSnippet() {
     font !== "inherit" && `data-font="${font}"`,
   ].filter(Boolean).join(" ");
   const snippet =
-`<script src="https://YOUR_CDN/web3ads.min.js" data-publisher-id="${id}" data-api-url="${process.env.NEXT_PUBLIC_BACKEND_URL}" async></script>
+`<script src="https://cdn.springbox.dev/web3ads.min.js" data-publisher-id="${id}" data-api-url="https://springbox.dev" async></script>
 <div data-w3ads-slot="my-slot-1" data-width="300" data-height="250" ${attrs}></div>`;
 
   return (
