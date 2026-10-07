@@ -13,6 +13,7 @@
     "@privy-io/node": "^0.35.0",
     "@privy-io/react-auth": "^3.45.0",
     "@supabase/supabase-js": "^2.117.2",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.48.0",

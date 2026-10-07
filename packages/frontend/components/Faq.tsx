@@ -1,10 +1,28 @@
-const faqs = [
+//components/Faq.tsx
+import type { ReactNode } from "react";
+
+const faqs: [string, ReactNode][] = [
   ["Do I need a crypto wallet?", "Yes, to fund campaigns or receive payouts to your own wallet. As a creator you can login with your email and a wallet is created for you, funds remain yours withdraw anytime."],
   ["How are views verified?", "Views are tracked by the platform SDK and confirmed on-chain before any payout is released."],
   ["How and when do creators get paid?", "Earnings are published onchain in regular batches called epochs. Once your earnings reach the $3 minimum, you can claim them to your wallet in one transaction, then withdraw to any wallet you like."],
   ["What does it cost?", "Advertisers pay a small platform fee on spend. Creators keep what they earn, minus network gas."],
   ["Are my funds safe?", "Yes, funds go in a smart contract and remain refundable."],
-  ["Which network is used?", "Arbitrum, an Ethereum L2. It keeps fees low and transactions fast, while funds stay secured by Ethereum."]
+  ["Which network is used?", "Arbitrum, an Ethereum L2. It keeps fees low and transactions fast, while funds stay secured by Ethereum."],
+  [
+    "Can I see a live demo?",
+    <>
+      Yes. Here's a short explainer page with live ads served by the SDK and a walkthrough of how it works. {" "}
+      <a
+        href="https://read.springbox.dev"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+      >
+         See the live demo
+      </a>
+      .
+    </>,
+  ],
 ];
 
 export default function Faq() {

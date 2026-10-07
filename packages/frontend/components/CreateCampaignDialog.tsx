@@ -9,7 +9,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import AdPreview from "@/components/AdPreview";
 
 const steps = ["Details", "Budget", "Creative", "Review"];
-const categories = ["defi", "marketing", "gaming", "nft", "infra", "general", "rwa", "tradfi", "cards"];
+const categories = ["defi", "marketing", "gaming", "nft", "infra", "general", "rwa", "tradfi", "cards", "payments", "stablecoins", "marketplace"];
 const ctaPresets = ["Learn more", "Sign up", "Buy now", "Trade", "Get started"];
 
 export default function CreateCampaignDialog() {

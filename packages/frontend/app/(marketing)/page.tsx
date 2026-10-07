@@ -5,6 +5,8 @@ import CampaignBoard from "@/components/CampaignBoard";
 import Faq from "@/components/Faq";
 import { getCampaigns } from "@/lib/data/campaigns";
 
+export const revalidate = 60;
+
 const btn = "rounded-full px-7 py-4 font-semibold transition hover:-translate-y-0.5";
 const stats = [["$4.2k", "paid to creators"], ["110", "active creators"], ["32", "live campaigns"]];
 const steps = [

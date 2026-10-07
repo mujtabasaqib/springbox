@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, Geist_Mono, Geist } from "next/font/google";
 import { site } from "@/lib/site";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next"
 import { cn } from "@/lib/utils";
 import { PrivyProviderWrapper } from "@/components/PrivyProviderWrapper";
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={cn(display.variable, sans.variable, mono.variable, "font-sans", geist.variable)}>
       <body>
         <PrivyProviderWrapper>{children}</PrivyProviderWrapper>
+        <Analytics />
       </body>
     </html>
   );
