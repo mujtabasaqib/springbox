@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import StatCard from "@/components/StatCard";
 import StatusPill from "@/components/StatusPill";
@@ -9,11 +9,13 @@ import FundCampaignButton from "@/components/FundCampaignButton";
 import FaucetButton from "@/components/FaucetButton";
 import EndCampaignButton from "@/components/EndCampaignButton";
 import type { AdCampaign } from "@/lib/data/advertiser";
+import { Check, Copy } from "lucide-react";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
 export default function AdvertiserView({ campaigns: all }: { campaigns: AdCampaign[] }) {
   const { user, ready } = usePrivy();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const campaigns = useMemo(
     () => (ready && user?.id ? all.filter((c) => c.advertiserId === user.id) : []),
@@ -26,6 +28,17 @@ export default function AdvertiserView({ campaigns: all }: { campaigns: AdCampai
     clicks: campaigns.reduce((s, c) => s + c.clicks, 0),
     conversions: 0,
   };
+
+  const txs = campaigns
+  .flatMap((c) => [
+    ...(c.fund_tx_hash
+      ? [{ id: `f-${c.id}`, hash: c.fund_tx_hash, date: c.created_at.slice(0, 10), kind: "Funded", amount: -c.budget }]
+      : []),
+    ...(c.status === "refunded" && c.budget - c.spent > 0
+      ? [{ id: `r-${c.id}`, hash: c.refund_tx_hash, date: c.refunded_at?.slice(0, 10) ?? "—", kind: "Refund", amount: c.budget - c.spent }]
+      : []),
+  ])
+  .sort((a, b) => b.date.localeCompare(a.date));
 
   const cards = [
     ["Total spend", usd(stats.spend)],
@@ -93,6 +106,57 @@ export default function AdvertiserView({ campaigns: all }: { campaigns: AdCampai
             </tbody>
           </table>
         )}
+        <div className="mt-6 overflow-x-auto rounded-3xl border border-line bg-surface p-6">
+  <p className="mb-4 font-medium">Funding history</p>
+  {txs.length === 0 ? (
+    <p className="text-sm text-muted">No transactions yet.</p>
+  ) : (
+    <table className="w-full min-w-[360px] text-left text-sm">
+      <thead className="text-muted">
+        <tr>
+          <th className="pb-3 font-normal">Date</th>
+          <th className="pb-3 font-normal">Amount</th>
+          <th className="pb-3 font-normal">Type</th>
+          <th className="pb-3 font-normal">TX</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-line">
+        {txs.map((t) => (
+          <tr key={t.id}>
+            <td className="py-3 font-mono text-muted">{t.date}</td>
+            <td className="py-3 font-mono">{t.amount < 0 ? "−" : "+"}{usd(Math.abs(t.amount))}</td>
+            <td className="py-3">{t.kind}</td>
+            <td className="py-3 font-mono text-muted">
+              {t.hash ? (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`https://sepolia.arbiscan.io/tx/${t.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {t.hash.slice(0, 5)}...
+                  </a>
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(t.hash!);
+                      setCopiedId(t.id);
+                      setTimeout(() => setCopiedId(null), 2000);
+                    }}
+                  >
+                    {copiedId === t.id ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+              ) : (
+                <span>—</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
       </div>
     </>
   );

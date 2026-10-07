@@ -106,14 +106,30 @@ export default function CreatorDashboard() {
                     <td className="py-3"><StatusPill status={p.status} /></td>
                     <td className="py-3 font-mono text-muted">
   <div className="flex items-center gap-2">
-    {p.id.slice(0, 5)}...
-    <button onClick={async () => {
-      await navigator.clipboard.writeText(p.id);
-      setCopiedId(p.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    }}>
-      {copiedId === p.id ? <Check size={14} /> : <Copy size={14} />}
-    </button>
+    {p.status === 'pending' ? (
+      <span>{p.id}</span>
+    ) : (
+      <>
+        <a
+          href={`https://sepolia.arbiscan.io/tx/${p.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          {p.id.slice(0, 5)}...
+        </a>
+
+        <button
+          onClick={async () => {
+            await navigator.clipboard.writeText(p.id);
+            setCopiedId(p.id);
+            setTimeout(() => setCopiedId(null), 2000);
+          }}
+        >
+          {copiedId === p.id ? <Check size={14} /> : <Copy size={14} />}
+        </button>
+      </>
+    )}
   </div>
 </td>
                   </tr>

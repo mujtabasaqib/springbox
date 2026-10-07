@@ -10,13 +10,17 @@ export type AdCampaign = {
   impressions: number;
   clicks: number;
   advertiserId: string | null;
+  created_at: string;
+  fund_tx_hash: string | null;
+  refund_tx_hash: string | null;
+  refunded_at: string | null;
 };
 
 export const getAdCampaigns = async (): Promise<AdCampaign[]> => {
   const [{ data, error }, { data: stats }] = await Promise.all([
     supabase
       .from("campaigns")
-      .select("id, title, status, budget, spent, advertiser_id")
+      .select("id, title, status, budget, spent, advertiser_id, created_at, fund_tx_hash, refund_tx_hash, refunded_at")
       .order("created_at", { ascending: false }),
     supabase.from("campaign_stats").select("campaign_id, impressions, clicks"),
   ]);

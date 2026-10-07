@@ -15,7 +15,6 @@ export default function FundCampaignButton({ campaignId, advertiserId, budget }:
   const [txHash, setTxHash] = useState<Hash | undefined>();
   const [error, setError] = useState<string | null>(null);
 
-  // Only the owner may fund; deposits are irreversible in v1.
   if (!user || user.id !== advertiserId) return null;
 
   const run = async () => {

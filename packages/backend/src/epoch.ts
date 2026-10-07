@@ -196,7 +196,10 @@ async function refundEndedCampaigns() {
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== 'success') throw new Error(`refund reverted: ${hash}`);
 
-      await supabase.from('campaigns').update({ status: REFUNDED_STATUS }).eq('id', c.id);
+      await supabase
+      .from('campaigns')
+      .update({ status: REFUNDED_STATUS, refund_tx_hash: hash, refunded_at: new Date().toISOString() })
+      .eq('id', c.id);
       console.log(`Campaign ${c.id}: refunded ${amount} units to ${advertiser}, tx ${hash}`);
     } catch (e) {
       console.error(`Campaign ${c.id}: refund failed:`, e);
