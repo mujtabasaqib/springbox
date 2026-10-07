@@ -20,11 +20,13 @@ export const escrowAbi = parseAbi([
   "function createCampaign(uint256 budget) returns (uint256)",
   "function claim(uint256 cumulativeAmount, bytes32[] proof)",
   "function minClaim() view returns (uint256)",
+  "function createCampaignWithPermit(uint256 budget, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
 ]);
 export const erc20Abi = parseAbi([
   "function approve(address spender, uint256 amount) returns (bool)",
   "function balanceOf(address) view returns (uint256)",
   "function transfer(address to, uint256 amount) returns (bool)",
+  "function nonces(address owner) view returns (uint256)",
 ]);
 
 // Must match the backend's conversion exactly (USDC has 6 decimals).

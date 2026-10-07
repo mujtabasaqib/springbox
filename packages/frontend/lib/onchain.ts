@@ -1,6 +1,7 @@
 import type { ConnectedWallet } from "@privy-io/react-auth";
 import type { Address, Hash } from "viem";
 import { chain, ESCROW, USDC, erc20Abi, escrowAbi, publicClient, toUnits, walletClientFor, feeBuffer } from "@/lib/chain";
+import { hexToNumber, slice } from "viem";
 
 const BACKEND = "";
 const authed = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
@@ -23,29 +24,48 @@ export async function fundOnchain(opts: {
   let txHash = opts.existingTx;
 
   if (!txHash) {
-    const units = toUnits(opts.budget);
-    const account = opts.wallet.address as Address;
+  const units = toUnits(opts.budget);
+  const account = opts.wallet.address as Address;
 
-    const balance = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: "balanceOf", args: [account] });
-    if (balance < units) throw new Error("Not enough USDC in your wallet for this budget");
+  const balance = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: "balanceOf", args: [account] });
+  if (balance < units) throw new Error("Not enough USDC in your wallet for this budget");
 
-    const client = await walletClientFor(opts.wallet);
+  const client = await walletClientFor(opts.wallet);
 
-    opts.onStep("Approving USDC…");
-    const approveHash = await client.writeContract({
-      address: USDC, abi: erc20Abi, functionName: "approve", args: [ESCROW, units], account, chain,
-      ...(await feeBuffer()),
-    });
-    await publicClient.waitForTransactionReceipt({ hash: approveHash });
+  opts.onStep("Sign to fund campaign…");
+  const nonce = await publicClient.readContract({ address: USDC, abi: erc20Abi, functionName: "nonces", args: [account] });
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
 
-    opts.onStep("Funding campaign…");
-    txHash = await client.writeContract({
-      address: ESCROW, abi: escrowAbi, functionName: "createCampaign", args: [units], account, chain,
-      ...(await feeBuffer()),
-    });
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
-    opts.onTx(txHash); // keep it so a backend failure can be retried without paying twice
-  }
+  const sig = await client.signTypedData({
+    account,
+    domain: { name: "USD Coin", version: "1", chainId: chain.id, verifyingContract: USDC },
+    types: {
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    primaryType: "Permit",
+    message: { owner: account, spender: ESCROW, value: units, nonce, deadline },
+  });
+
+  const r = slice(sig, 0, 32);
+  const s = slice(sig, 32, 64);
+  let v = hexToNumber(slice(sig, 64, 65));
+  if (v < 27) v += 27;
+
+  opts.onStep("Funding campaign…");
+  txHash = await client.writeContract({
+    address: ESCROW, abi: escrowAbi, functionName: "createCampaignWithPermit",
+    args: [units, deadline, v, r, s], account, chain,
+    ...(await feeBuffer()),
+  });
+  await publicClient.waitForTransactionReceipt({ hash: txHash });
+  opts.onTx(txHash);
+}
 
   opts.onStep("Verifying…");
   const res = await fetch(`${BACKEND}/v1/campaigns/${opts.campaignId}/fund`, {
