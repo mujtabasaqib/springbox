@@ -27,7 +27,7 @@ export function sendEvent(
   type: EventType,
   ad: AdCreative,
   slotId: string,
-  bot?: BotSignals, // only impressions attach this today; click stays unverified by design
+  bot?: BotSignals, 
 ) {
   const url = `${cfg.apiUrl}/v1/events`;
   const body = JSON.stringify({
@@ -38,7 +38,6 @@ export function sendEvent(
     publisherId: cfg.publisherId,
     slotId,
     ts: Date.now(),
-    // The SDK only reports these; it never decides whether they're good enough.
     dwellMs: bot?.dwellMs,
     focusRatio: bot?.focusRatio,
   });

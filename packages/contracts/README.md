@@ -1,66 +1,43 @@
-## Foundry
+# Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Foundry project with the USDC escrow and a permit-enabled mock USDC for testnet.
 
-Foundry consists of:
+## Escrow
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- `createCampaign(budget)` and `createCampaignWithPermit(...)` fund a campaign. The permit version needs one signature and one transaction.
+- `publishEpoch(root, total)` is operator-only and sets the Merkle root.
+- `claim(cumulativeAmount, proof)` pays out the difference between the cumulative amount and what was already claimed.
+- `refund(campaignId, advertiser, amount)` returns unspent budget to the advertiser.
 
-## Documentation
+## Mock USDC
 
-https://book.getfoundry.sh/
+`MockUSDCPermit` is an ERC-20 with 6 decimals, `permit`, and an open `mint`. **Testnet only.**
 
-## Usage
+## Build and test
 
-### Build
-
-```shell
-$ forge build
+```bash
+forge build
+forge test -vv
 ```
 
-### Test
+## Deploy
 
-```shell
-$ forge test
+```bash
+forge script script/Deploy.s.sol \
+  --rpc-url $RPC_URL \
+  --broadcast
 ```
 
-### Format
+Record the escrow address and its deploy block, then set them in the frontend and backend environments.
 
-```shell
-$ forge fmt
-```
+## Network
 
-### Gas Snapshots
+Live contract and Mock USDC on Arbitrum Sepolia
 
-```shell
-$ forge snapshot
-```
+Escrow: `https://sepolia.arbiscan.io/address/0xA9a6d56f7D8791e77622c7110A9D1A24a3D1f62E`
 
-### Anvil
+USDC: `https://sepolia.arbiscan.io/address/0xB5B63eE7A19D3183850524539B89C749a57B79e0`
 
-```shell
-$ anvil
-```
+## License
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+MIT

@@ -1,9 +1,6 @@
 export interface SdkConfig {
-  /** Publisher ID issued by the platform (registered on-chain / in backend). */
   publisherId: string;
-  /** Backend base URL. Defaults to the production API. */
   apiUrl?: string;
-  /** Log debug info to console. */
   debug?: boolean;
 }
 
@@ -40,8 +37,8 @@ export interface AdTheme {
 export interface AdCreative {
   adId: string;
   campaignId: string;
-  imageUrl?: string;       // was required, now only for image ads
-  native?: NativeContent;  // present => native ad
+  imageUrl?: string;       
+  native?: NativeContent; 
   clickUrl: string;
   width: number;
   height: number;

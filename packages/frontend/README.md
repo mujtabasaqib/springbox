@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
 
-## Getting Started
+Next.js app that serves the advertiser and creator dashboards **and** the API used by the SDK. Deployed on Vercel.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+app/
+  (marketing)/     Landing, about, how-it-works
+  dashboard/       Advertiser and creator dashboards
+  v1/              API routes (ads, events, campaigns, claims, faucet, profiles, publisher)
+components/        UI and wallet components
+lib/
+  server/          Server-only helpers (Supabase, Privy auth, tokens, chain reads)
+  data/            Dashboard data fetching
+  onchain.ts       Fund, claim and withdraw transactions
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API
 
-## Learn More
+| Route | Purpose |
+|---|---|
+| `POST /v1/ads/request` | Returns an ad and a signed token (CORS open for the SDK) |
+| `POST /v1/events` | Records an impression or click after verifying the token |
+| `/v1/campaigns/*` | Create, fund (verifies the tx on-chain), end |
+| `/v1/claims/*` | Claim state, history, record claim and withdraw |
+| `POST /v1/faucet` | Testnet ETH and USDC with a per-wallet cooldown |
+| `/v1/profiles/*`, `/v1/publisher/me` | Role and publisher ID |
 
-To learn more about Next.js, take a look at the following resources:
+Protected routes expect `Authorization: Bearer <Privy token>`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Public (`NEXT_PUBLIC_`): Privy app ID, Supabase URL, Supabase publishable key, plus any chain vars read by `lib/chain.ts`.
 
-## Deploy on Vercel
+Server only (never prefix with `NEXT_PUBLIC_`): `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `TOKEN_SECRET`, `FAUCET_SEPOLIA_PRIVATE_KEY`, `RPC_URL`, `CHAIN_ID`, `USDC_ADDRESS`, and the escrow address.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The operator key is **not** used here. It lives only in the epoch job.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+
+Import the repo in Vercel, set the root directory to `packages/frontend`, and add the variables above.
+
+## License
+
+AGPL-3.0

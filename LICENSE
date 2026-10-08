@@ -1,0 +1,8 @@
+This repository contains multiple licenses:
+
+- packages/sdk        MIT
+- packages/contracts  MIT
+- packages/backend    MIT
+- packages/frontend   AGPL-3.0
+
+See the LICENSE file inside each package.

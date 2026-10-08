@@ -8,8 +8,8 @@ import type {
 import { isSafeUrl, log } from "./utils";
 import { renderNativeAd } from "./native";
 
-const VIEW_THRESHOLD = 0.5; // 50% of pixels visible...
-const VIEW_MS = 1000; // ...for 1 continuous second (IAB-style viewability)
+const VIEW_THRESHOLD = 0.5; 
+const VIEW_MS = 1000;
 
 export function mountSlot(
   cfg: ResolvedConfig,
@@ -21,7 +21,6 @@ export function mountSlot(
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   // --- Dwell-time / focus tracking -----------------------------------------
-  // v1 bot-verification layer: no Turnstile yet (see turnstile.ts, unused for now).
   const slotCreatedAt = Date.now();
   let dwellMs = 0;
   let dwellSince: number | null = null;

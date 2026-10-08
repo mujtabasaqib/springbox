@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@privy-io/node": "^0.35.0",

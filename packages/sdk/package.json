@@ -23,6 +23,7 @@
     "dist"
   ],
   "sideEffects": false,
+  "license": "MIT",
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
