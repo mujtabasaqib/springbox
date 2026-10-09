@@ -27,7 +27,7 @@ src/
 
 ## Environment variables
 
-`OPERATOR_PRIVATE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `RPC_URL`, `CHAIN_ID`, `ESCROW_DEPLOY_BLOCK`, and the escrow address.
+`OPERATOR_PRIVATE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `RPC_URL`, `CHAIN_ID`, `ESCROW_DEPLOY_BLOCK`, and the escrow address. See .env.example
 
 ## Scheduling
 

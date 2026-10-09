@@ -43,7 +43,8 @@ Public (`NEXT_PUBLIC_`): Privy app ID, Supabase URL, Supabase publishable key, p
 
 Server only (never prefix with `NEXT_PUBLIC_`): `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `TOKEN_SECRET`, `FAUCET_SEPOLIA_PRIVATE_KEY`, `RPC_URL`, `CHAIN_ID`, `USDC_ADDRESS`, and the escrow address.
 
-The operator key is **not** used here. It lives only in the epoch job.
+The operator key is **not** used here. It lives only in the epoch job. 
+See .env.example
 
 ## Deploy
 

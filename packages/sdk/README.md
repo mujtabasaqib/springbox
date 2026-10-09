@@ -32,6 +32,12 @@ npm run build      # outputs dist/web3ads.min.js
 
 Host the built file on any static host (Cloudflare Pages, for example).
 
+## Demo
+
+This site embeds the sdk snippet. Visit to see live.
+
+[read.springbox.dev](https://read.springbox.dev)
+
 ## License
 
 MIT

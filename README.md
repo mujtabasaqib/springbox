@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://springbox.dev">Live app</a> 
+  <a href="https://springbox.dev">Live app</a> ·
+  <a href="https://youtu.be/PAutEY7t38Y">Demo</a
 </p>
 
 ## What it does
@@ -61,6 +62,11 @@ Login as a creator copy your publisher snippet customize and paste in your site 
         data-publisher-id="pub_xxx"
         data-api-url="https://springbox.dev" async></script>
 ```
+## Demo
+
+This site embeds the sdk snippet. Visit to see live.
+
+[read.springbox.dev](https://read.springbox.dev)
 
 ## Quick start
 
